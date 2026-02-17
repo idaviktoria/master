@@ -5,26 +5,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy
 from scipy.optimize import curve_fit
+from pathlib import Path
+#from dynamic_stock_model import DynamicStockModel as dsm
 
-from dynamic_stock_model import DynamicStockModel as dsm
+#%% Set up file path to read the data
 
-#%% Import stock data
-# SSP1 data
-data_stock_SSP1 = pd.read_csv(r'C:\Users\ovid\MasterThesis\master\data\processed_baseline\stock_SSP1.csv')
+BASE_DIR = Path(__file__).resolve().parent.parent
+file_path = BASE_DIR / "data" / "processed_baseline" / "stock_SSP1.csv"
+
+data_stock_SSP1 = pd.read_csv(file_path)
 
 stock_SSP1 = data_stock_SSP1.groupby("Year")["Value"].sum()
 
 stock_SSP1 = stock_SSP1[stock_SSP1.index != 'Unnamed: 24']
 
 # SSP2-L data
-data_stock_SSP2_L = pd.read_csv(r'C:\Users\ovid\MasterThesis\master\data\processed_baseline\stock_SSP2_L.csv')
+data_stock_SSP2_L = pd.read_csv(BASE_DIR / "data" / "processed_baseline" / "stock_SSP2_L.csv")
 
 stock_SSP2_L = data_stock_SSP2_L.groupby("Year")["Value"].sum()
 
 stock_SSP2_L = stock_SSP2_L[stock_SSP2_L.index != 'Unnamed: 24']
 
 # SSP2-M data
-data_stock_SSP2_M = pd.read_csv(r'C:\Users\ovid\MasterThesis\master\data\processed_baseline\stock_SSP2_M.csv')
+data_stock_SSP2_M = pd.read_csv(BASE_DIR / "data" / "processed_baseline" / "stock_SSP2_M.csv")
 
 stock_SSP2_M = data_stock_SSP2_M.groupby("Year")["Value"].sum()
 
@@ -95,13 +98,13 @@ stock_SSP1.index = stock_SSP1.index.astype(int)
 stock_SSP2_L.index = stock_SSP2_L.index.astype(int)
 stock_SSP2_M.index = stock_SSP2_M.index.astype(int)
 
-# Then filter up to 2060
-stock_SSP1_2050 = stock_SSP1[stock_SSP1.index <= 2050]
-stock_SSP2_L_2050 = stock_SSP2_L[stock_SSP2_L.index <= 2050]
-stock_SSP2_M_2050 = stock_SSP2_M[stock_SSP2_M.index <= 2050]
+# Then filter up to 2050
+stock_SSP1_2050 = stock_SSP1.loc[2025:2050]
+stock_SSP2_L_2050 = stock_SSP2_L.loc[2025:2050]
+stock_SSP2_M_2050 = stock_SSP2_M.loc[2025:2050]
 
 # Convert to arrays
-years = stock_SSP1_2050.index.to_numpy()
+years = stock_SSP1.index.to_numpy()
 
 values_SSP1_2050 = stock_SSP1_2050.to_numpy()
 values_SSP2_L_2050 = stock_SSP2_L_2050.to_numpy()
@@ -119,6 +122,19 @@ plt.xlabel('Years')
 plt.ylabel('GW')
 plt.title('Original data')
 plt.show()
+
+#%% Historic data
+historic_data = [14.12, 46.36, 102.87, 162.19, 289.46, 722.78]
+historic_data = np.array(historic_data) / 1000
+
+#%% Combine historic data with original data per scenario
+combined_SSP1 = np.concatenate((historic_data, values_SSP1_2050))
+combined_SSP2_L = np.concatenate((historic_data, values_SSP2_L_2050))
+combined_SSP2_M = np.concatenate((historic_data, values_SSP2_M_2050))
+
+print(combined_SSP1)
+print(combined_SSP2_L)
+print(combined_SSP2_M)
 
 #%% Fit the logistic function to the data
 # Initial guess (ti, tau, C0, C1) for SSP1
@@ -178,9 +194,6 @@ print("Fitted parameters:", popt_SSP2_M)
 
 pred_output_SSP2_M = logistic(extended_years, *popt_SSP2_M)
 
-#%% Historic data
-historic_data = [14.12, 46.36, 102.87, 162.19, 289.46, 722.78]
-historic_data = np.array(historic_data) / 1000
 
 #%% Future data regression
 print(f'The optimal choice of parameters for the logistic function, given the sample data, is {popt_SSP2_M} (ti, tau, C0, C1).')

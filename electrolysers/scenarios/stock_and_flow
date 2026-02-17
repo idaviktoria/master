@@ -1,0 +1,288 @@
+#%%
+import sys
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy
+from scipy.optimize import curve_fit
+
+from dynamic_stock_model import DynamicStockModel as dsm
+
+#%% Import stock data
+# SSP1 data
+data_stock_SSP1 = pd.read_csv(r'C:\Users\ovid\MasterThesis\master\data\processed_baseline\stock_SSP1.csv')
+
+stock_SSP1 = data_stock_SSP1.groupby("Year")["Value"].sum()
+
+stock_SSP1 = stock_SSP1[stock_SSP1.index != 'Unnamed: 24']
+
+# SSP2-L data
+data_stock_SSP2_L = pd.read_csv(r'C:\Users\ovid\MasterThesis\master\data\processed_baseline\stock_SSP2_L.csv')
+
+stock_SSP2_L = data_stock_SSP2_L.groupby("Year")["Value"].sum()
+
+stock_SSP2_L = stock_SSP2_L[stock_SSP2_L.index != 'Unnamed: 24']
+
+# SSP2-M data
+data_stock_SSP2_M = pd.read_csv(r'C:\Users\ovid\MasterThesis\master\data\processed_baseline\stock_SSP2_M.csv')
+
+stock_SSP2_M = data_stock_SSP2_M.groupby("Year")["Value"].sum()
+
+stock_SSP2_M = stock_SSP2_M[stock_SSP2_M.index != 'Unnamed: 24']
+
+#%%
+#define logistic function and noise function
+def logistic(x:np.ndarray,ti:float,tau:float,C0:float,C1:float) -> np.ndarray:
+    """
+    General logistic function.
+    Arguments:
+    - x: np.ndarray of observation points (time)
+    - ti: inflection time
+    - tau: transition time coefficient
+    - C0: start value
+    - C1: end value
+
+    Returns:
+    - np.ndarray with len(x) number of points
+    """
+    return (C1 - C0)/(1 + np.exp(-(x - ti) / tau)) + C0  
+
+
+def noise(start: int, stop: int, lo_time_deltas: list, lo_deviations: list) -> np.ndarray:
+    '''
+    Generates noise for timeseries for a set of time deltas and 
+    deviations.This works by setting random deviations at certain 
+    intervals and interpolating the points in between.The noise can then
+    simply be added to the smooth timeseries curve to generate the final
+    timeseries.
+    
+    Arguments:
+    - start: beginning of the timeseries
+    - stop: end of the timeseries
+    - lo_time_deltas: list of time deltas which set the points at which 
+                      noise trends are set
+    - lo_deviations: the respective standard deviation from which the 
+                     deviation for each point is drawn.
+
+    Returns:
+    - np.ndarray with stop-start+1 values of noise, averaging around 0
+    '''
+    no_time = stop-start +1 #number of discrete time instances
+    final_points = np.zeros(no_time)
+
+    for (time_delta, deviation) in zip(lo_time_deltas, lo_deviations):
+        no_points = int((no_time-1)/time_delta)+2 #1 more than necessary to extend series
+        end_time = start + (no_points-1)*time_delta
+        macro_points = np.random.normal(0, deviation, no_points) 
+        macro_point_x = np.linspace(start, end_time,no_points)
+        macro_point_x = np.delete(macro_point_x, -1) #delete the extra point here
+
+
+        extended_macro_points = [macro_points[0]]
+        for index, macro_point in enumerate(macro_points[1:]):
+            connection = np.linspace(macro_points[index], macro_point, time_delta+1, endpoint=True)
+            extended_macro_points.extend(connection[1:])
+        extended_macro_points = np.array(extended_macro_points[0:no_time])
+        macro_points = np.delete(macro_points, -1)
+
+        final_points = np.add(final_points, extended_macro_points)
+
+    return final_points
+
+#%% Logistic regression to fill in missing values in the stock data
+# Convert index (Year) to int
+stock_SSP1.index = stock_SSP1.index.astype(int)
+stock_SSP2_L.index = stock_SSP2_L.index.astype(int)
+stock_SSP2_M.index = stock_SSP2_M.index.astype(int)
+
+# Then filter up to 2060
+stock_SSP1_2050 = stock_SSP1[stock_SSP1.index <= 2050]
+stock_SSP2_L_2050 = stock_SSP2_L[stock_SSP2_L.index <= 2050]
+stock_SSP2_M_2050 = stock_SSP2_M[stock_SSP2_M.index <= 2050]
+
+# Convert to arrays
+years = stock_SSP1_2050.index.to_numpy()
+
+values_SSP1_2050 = stock_SSP1_2050.to_numpy()
+values_SSP2_L_2050 = stock_SSP2_L_2050.to_numpy()
+values_SSP2_M_2050 = stock_SSP2_M_2050.to_numpy()
+
+extended_years = np.arange(1990, 2050)
+
+#%% Plot the original data
+plt.figure(figsize=(10,6.5))
+plt.scatter(years, values_SSP1_2050,  color= 'teal', s=5, label = f'original values SSP1', zorder = 3)  # Add dots for each data point
+plt.scatter(years, values_SSP2_L_2050,  color= 'orange', s=5, label = f'original values SSP2-L', zorder = 3)  # Add dots for each data point
+plt.scatter(years, values_SSP2_M_2050,  color= 'red', s=5, label = f'original values SSP2-M', zorder = 3)  # Add dots for each data point
+plt.legend(loc = 'best')
+plt.xlabel('Years')
+plt.ylabel('GW')
+plt.title('Original data')
+plt.show()
+
+#%% Fit the logistic function to the data
+# Initial guess (ti, tau, C0, C1) for SSP1
+p0_SSP1 = [2050, 10, min(values_SSP1_2050), max(values_SSP1_2050) - min(values_SSP1_2050)]
+
+# Bounds (keep them realistic)
+lower_bounds_SSP1 = [2000, 0.1, 0, 0]
+upper_bounds_SSP1 = [2050, 50, 1e7, 1e7]
+
+popt_SSP1, pcov_SSP1 = curve_fit(
+    logistic,
+    years,
+    values_SSP1_2050,
+    p0=p0_SSP1,
+    bounds=(lower_bounds_SSP1, upper_bounds_SSP1)
+)
+
+print("Fitted parameters:", popt_SSP1)
+
+pred_output_SSP1 = logistic(extended_years, *popt_SSP1)
+
+# Initial guess (ti, tau, C0, C1) for SSP2-L
+p0_SSP2_L = [2050, 10, min(values_SSP2_L_2050), max(values_SSP2_L_2050) - min(values_SSP2_L_2050)]
+
+# Bounds (keep them realistic)
+lower_bounds_SSP2_L = [2000, 0.1, 0, 0]
+upper_bounds_SSP2_L = [2050, 25, 1e7, 1e7]
+
+popt_SSP2_L, pcov_SSP2_L = curve_fit(
+    logistic,
+    years,
+    values_SSP2_L_2050,
+    p0=p0_SSP2_L,
+    bounds=(lower_bounds_SSP2_L, upper_bounds_SSP2_L)
+)
+
+print("Fitted parameters:", popt_SSP2_L)
+
+pred_output_SSP2_L = logistic(extended_years, *popt_SSP2_L)
+
+# Initial guess (ti, tau, C0, C1) for SSP2-M
+p0_SSP2_M = [2050, 10, min(values_SSP2_M_2050), max(values_SSP2_M_2050) - min(values_SSP2_M_2050)]
+
+# Bounds (keep them realistic)
+lower_bounds_SSP2_M = [2000, 0.1, 0, 0]
+upper_bounds_SSP2_M = [2050, 25, 1e7, 1e7]
+
+popt_SSP2_M, pcov_SSP2_M = curve_fit(
+    logistic,
+    years,
+    values_SSP2_M_2050,
+    p0=p0_SSP2_M,
+    bounds=(lower_bounds_SSP2_M, upper_bounds_SSP2_M)
+)
+
+print("Fitted parameters:", popt_SSP2_M)
+
+pred_output_SSP2_M = logistic(extended_years, *popt_SSP2_M)
+
+#%% Historic data
+historic_data = [14.12, 46.36, 102.87, 162.19, 289.46, 722.78]
+historic_data = np.array(historic_data) / 1000
+
+#%% Future data regression
+print(f'The optimal choice of parameters for the logistic function, given the sample data, is {popt_SSP2_M} (ti, tau, C0, C1).')
+plt.figure(figsize=(10,6.5))
+plt.scatter([2020, 2021, 2022, 2023, 2024, 2025], historic_data, label='Historic data', color='black')
+plt.plot(extended_years, pred_output_SSP1, color= 'teal' , lw = 2, label = 'SSP1-VLLO')
+plt.plot(extended_years, pred_output_SSP2_L, color= 'skyblue' , lw = 2, label = 'SSP2-L')
+plt.plot(extended_years, pred_output_SSP2_M, color= 'purple' , lw = 2, label = 'SSP2-M')
+plt.legend(loc = 'best')
+plt.xlabel('Years')
+plt.ylabel('GW')
+plt.title('Logistic regression - Installed Capacity (GW) in Europe 1990-2050')
+plt.show()
+
+#%% Only look at the fitted curves from 2015 to 2040 to see if validation data points are close to the fitted curve
+# Make the range for the y-axis smaller to see the differences between the scenarios more clearly
+
+plt.figure(figsize=(10,6.5))
+plt.scatter([2020, 2021, 2022, 2023, 2024, 2025], historic_data, label='Historic data', color='black')
+plt.plot(extended_years, pred_output_SSP1, color= 'teal' , lw = 2, label = 'SSP1-VLLO')
+plt.plot(extended_years, pred_output_SSP2_L, color= 'skyblue' , lw = 2, label = 'SSP2-L')
+plt.plot(extended_years, pred_output_SSP2_M, color= 'purple' , lw = 2, label = 'SSP2-M')
+plt.xlim(2015, 2030)
+plt.ylim(-5, 40)
+plt.legend(loc = 'best')
+plt.xlabel('Years')
+plt.ylabel('GW')
+plt.title('Logistic regression - Installed Capacity (GW) in Europe 1990-2030')
+plt.show()
+
+#%% Put the values in a dataframe next to the historic data for easier comparison
+comparison_df = pd.DataFrame({
+    "Year": range(2020, 2026),
+    "Historic": historic_data,
+    "SSP1-VLLO": [logistic(year, *popt_SSP1) for year in range(2020, 2026)],
+    "SSP2-L": [logistic(year, *popt_SSP2_L) for year in range(2020, 2026)],
+    "SSP2-M": [logistic(year, *popt_SSP2_M) for year in range(2020, 2026)]
+})
+
+
+print(comparison_df)
+
+#%% Dynamic stock model - stock-driven model with logistic regression as stock timeseries and normal distribution for lifetime distribution
+t = np.arange(1990, 2060)
+s = logistic(extended_years, *popt_SSP2_M)
+
+# Lifetime distribution
+lt = {
+    'Type': 'Normal',
+    'Mean': np.full(len(t), 3),
+    'StdDev': np.full(len(t), 2)
+}
+
+dsm = dsm(t = t, s = s, lt = lt)
+
+s_c, o_c, i = dsm.compute_stock_driven_model(NegativeInflowCorrect = False)
+
+#Compute outflow by cohort from stock by cohort.
+o_c= dsm.compute_o_c_from_s_c()
+
+#Determine total outflow as row sum of cohort-specific outflow.
+o = dsm.compute_outflow_total()
+
+#Determine stock change from time series for stock. Formula: stock_change(t) = stock(t) - stock(t-1).
+stock_change = dsm.compute_stock_change()
+
+#%% Plot stock, outflow, inflow and stock change over time
+plt.figure(figsize=(10,6.5))
+plt.plot(t, s, label='Stock (logistic regression)', color='blue')
+plt.plot(t, o, label='Outflow', color='orange')
+plt.plot(t, i, label='Inflow', color='green')
+plt.plot(t, stock_change, label='Stock Change', color='red')
+plt.xlabel('Year')
+plt.ylabel('GW')
+plt.title('Installed Capacity (GW) - SSP1-L')
+plt.legend()
+plt.show()
+
+#%% Plot inflow data from REMIND
+data_inflow_SSP1 = pd.read_csv(r'C:\Users\ovid\MasterThesis\master\data\processed_validation\inflow_SSP1_L.csv')
+inflow_SSP1 = data_inflow_SSP1.groupby("Year")["Value"].sum()
+inflow_SSP1 = inflow_SSP1[inflow_SSP1.index != 'Unnamed: 24']
+
+# Convert index (Year) to int
+inflow_SSP1.index = inflow_SSP1.index.astype(int)
+
+# Then filter up to 2100
+inflow_SSP1_2100 = inflow_SSP1[inflow_SSP1.index <= 2100]
+
+# Convert to arrays
+years = inflow_SSP1_2100.index.to_numpy()
+
+plt.figure(figsize=(10,6.5))
+plt.scatter(years, inflow_SSP1_2100, label='Inflow (REMIND)', color='green')
+plt.plot(t, i, label='Inflow (DSM)', color='red')
+plt.xlabel('Year')
+plt.ylabel('GW')|
+plt.title('Inflow from REMIND - SSP1')
+plt.legend()
+plt.show()
+
+#%%
+inflow_SSP1_2100 = inflow_SSP1[inflow_SSP1.index <= 2100]
+
+#%% Inflow driven model - look at it later

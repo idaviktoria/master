@@ -1,0 +1,41 @@
+Model,Scenario,Region,Variable,Unit,Year,Value
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2005,0.0
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2005,0.0
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2010,0.0
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2010,0.0
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2015,0.0
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2015,0.0
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2020,0.0189758
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2020,0.0026846
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2025,0.4842464
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2025,0.0107357
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2030,2.7381125
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2030,0.0769741
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2035,5.233161
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2035,0.2734962
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2040,6.3676891
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2040,0.6195485
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2045,7.1529431
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2045,1.076138
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2050,9.1462775
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2050,1.5097337
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2055,11.2656582
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2055,1.6873432
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2060,9.3712165
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2060,1.4155215
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2070,7.4269483
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2070,1.6610736
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2080,6.0533095
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2080,2.2874319
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2090,6.4141368
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2090,2.3502544
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2100,6.1250535
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2100,2.0053263
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2110,2.9290914
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2110,2.2925449
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2130,1.4145103
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2130,1.5361605
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2150,0.0001
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2150,0.3824388
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,Unnamed: 24,
+REMIND,C_SMIPv08-L-SSP2-PkPrice400-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,Unnamed: 24,

@@ -1,0 +1,41 @@
+Model,Scenario,Region,Variable,Unit,Year,Value
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2005,0.0
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2005,0.0
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2010,0.0
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2010,0.0
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2015,0.0
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2015,0.0
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2020,0.0189758
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2020,0.0026846
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2025,0.4842464
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2025,0.0107357
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2030,2.0494938
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2030,0.0575847
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2035,4.3439528
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2035,0.1965014
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2040,6.3315986
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2040,0.3302411
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2045,8.1819913
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2045,0.4236204
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2050,10.9606891
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2050,0.6043513
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2055,13.6652659
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2055,0.6905626
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2060,11.3250203
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2060,0.4529751
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2070,9.7982692
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2070,0.4790541
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2080,11.4187957
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2080,0.8188409
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2090,12.3145
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2090,0.9298261
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2100,9.7719951
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2100,0.7027526
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2110,10.3104906
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2110,0.8828121
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2130,7.2613517
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2130,0.6169693
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2150,1.5527218
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2150,0.104656
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,Unnamed: 24,
+REMIND,C_SMIPv08-M-SSP2-NPi2025-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,Unnamed: 24,

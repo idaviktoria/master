@@ -1,0 +1,41 @@
+Model,Scenario,Region,Variable,Unit,Year,Value
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2005,0.0
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2005,0.0
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2010,0.0
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2010,0.0
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2015,0.0
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2015,0.0
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2020,0.0189758
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2020,0.0026846
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2025,0.4842464
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2025,0.0107357
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2030,4.4346938
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2030,0.3561621
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2035,10.1542671
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2035,1.1662012
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2040,15.4018861
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2040,2.4340565
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2045,18.4487191
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2045,3.5113746
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2050,15.8344692
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2050,3.6025079
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2055,10.0369247
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2055,2.7639735
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2060,4.3171469
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2060,1.4787013
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2070,4.2056792
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2070,1.7505176
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2080,4.7797325
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2080,2.2856142
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2090,2.5783646
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2090,1.489603
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2100,2.0442575
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2100,0.7940046
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2110,2.0196921
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2110,0.7429692
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2130,1.1805246
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2130,0.4707428
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,2150,0.1564736
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,2150,0.1160369
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,EUR,New Cap|Hydrogen|+|Electricity,GW/yr,Unnamed: 24,
+REMIND,C_SMIPv08-VLLO-SSP1-PkPrice500-def-rem-6,NEU,New Cap|Hydrogen|+|Electricity,GW/yr,Unnamed: 24,

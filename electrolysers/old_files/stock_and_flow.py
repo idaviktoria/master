@@ -113,7 +113,7 @@ values_SSP2_M_2050 = stock_SSP2_M_2050.to_numpy()
 extended_years = np.arange(1990, 2050)
 
 #%% Plot the original data
-plt.figure(figsize=(10,6.5))
+plt.figure(figsize=(10, 6.5))
 plt.scatter(years, values_SSP1_2050,  color= 'teal', s=5, label = f'original values SSP1', zorder = 3)  # Add dots for each data point
 plt.scatter(years, values_SSP2_L_2050,  color= 'orange', s=5, label = f'original values SSP2-L', zorder = 3)  # Add dots for each data point
 plt.scatter(years, values_SSP2_M_2050,  color= 'red', s=5, label = f'original values SSP2-M', zorder = 3)  # Add dots for each data point

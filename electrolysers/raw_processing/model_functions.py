@@ -441,3 +441,70 @@ def run_scenario(params: dict, scenario_name: str):
         pickle.dump(out, f)
     print(f'  Saved → {out_path}')
     return out
+
+def load_remind_data(file_paths: dict, year_cols=None):
+    """
+    Load and extract green H2 data from REMIND .mif files.
+    
+    Parameters
+    ----------
+    file_paths : dict — {scenario_label: filepath}
+    year_cols  : list of str — year columns to extract (default 2020-2100)
+    
+    Returns
+    -------
+    remind_data : dict — {scenario_label: {'years': [...], 'total_h2': [...], 'green_h2': [...]}}
+    """
+    import pandas as pd
+    import numpy as np
+
+    if year_cols is None:
+        year_cols = ['2020','2025','2030','2035','2040','2045','2050',
+                     '2060','2070','2080','2090','2100']
+
+    EJ_to_MtH2 = 1000 / 142  # 1 EJ ≈ 7.04 Mt H2 (LHV)
+    remind_data = {}
+
+    for label, fpath in file_paths.items():
+        df   = pd.read_csv(fpath, sep=';')
+        dfw  = df[df['Region'] == 'World'].copy()
+
+        def get_var(variable):
+            row = dfw[dfw['Variable'] == variable][year_cols]
+            if row.empty:
+                return np.zeros(len(year_cols))
+            return row.values[0].astype(float) * EJ_to_MtH2
+
+        remind_data[label] = {
+            'years':    [int(y) for y in year_cols],
+            'total_h2': get_var('SE|Hydrogen'),
+            'green_h2': get_var('SE|Hydrogen|+|Electricity'),
+        }
+        print(f'Loaded: {label}  |  Green H2 2050: {remind_data[label]["green_h2"][year_cols.index("2050")]:.1f} Mt')
+
+    return remind_data
+
+def compare_remind_h2(scenarios: dict, remind_data: dict):
+    """
+    Interpolate model H2 demand to REMIND year grid for comparison.
+
+    Parameters
+    ----------
+    scenarios   : dict — loaded scenario results (from 05_plots.ipynb)
+    remind_data : dict — loaded REMIND data (from load_remind_data())
+
+    Returns
+    -------
+    dict — {scenario_name: interpolated H2 array}
+    """
+    import numpy as np
+
+    remind_years = list(remind_data.values())[0]['years']
+
+    def interp_model_h2(sc_name):
+        sc        = scenarios[sc_name]
+        model_yrs = sc['plot_years']
+        model_h2  = sc['h2']['H2 Demand (Mt)']
+        return np.interp(remind_years, model_yrs, model_h2)
+
+    return {name: interp_model_h2(name) for name in scenarios}

@@ -20,6 +20,31 @@ RAW_FOLDER    = BASE_PATH / 'data' / 'raw'
 OUTPUT_FOLDER = BASE_PATH / 'data' / 'processed'
 OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
+# ── IEA grid CO2 intensity trajectories ───────────────────────────────────────
+_IEA_GRID_YEARS = [2010, 2023, 2024, 2035, 2040, 2050]
+_IEA_GRID_DATA  = {
+    'current_policies': [529, 457, 446, 291, 246, 192],
+    'stated_policies':  [529, 457, 446, 251, 187, 122],
+    'net_zero':         [529, 457, 446,  72,   4,   0],
+}
+
+def get_grid_co2_trajectory(trajectory, model_years):
+    model_years = np.asarray(model_years)
+    interp      = PchipInterpolator(_IEA_GRID_YEARS, _IEA_GRID_DATA[trajectory])
+    values      = interp(model_years)
+
+    # Hold 2050 value constant beyond 2050 — no data after that year
+    val_2050 = float(interp(2050))
+    values   = np.where(model_years > 2050, val_2050, values)
+
+    return np.clip(values, 0, None)
+
+GRID_TRAJECTORY_MAP = {
+    'Baseline':        'current_policies',
+    'DRI Scale-Up':    'current_policies',
+    'Technology':      'stated_policies',
+    'Full Transition': 'net_zero',
+}
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 def logistic(t, K, r, t0):
@@ -69,7 +94,7 @@ def load_raw_data():
     steel_data      = pd.read_excel(steel_folder / 'steel.xlsx')
     steel_shares    = pd.read_csv(steel_folder / 'steel_shares_1900_2008.csv')
     pop_data        = pd.read_csv(pop_folder / 'population.csv')
-    future_pop_data = pd.read_csv(pop_folder / 'future_population.csv')
+    future_pop_data = pd.read_csv(pop_folder / 'future_population.csv', low_memory=False)
 
     # Clean steel stock
     steel_stock_data = steel_data.copy()
@@ -97,7 +122,7 @@ def load_raw_data():
 
 
 # ── Main model function ────────────────────────────────────────────────────────
-def run_scenario(params: dict, scenario_name: str):
+def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
     """
     Run the full model for a given set of parameters and save results.
 
@@ -126,9 +151,10 @@ def run_scenario(params: dict, scenario_name: str):
         iridium_intensity_2050  : float  — Ir intensity PEM in 2050 (kg/MW)
     scenario_name : str — used for output filename
     """
-    print(f'\n{"="*60}')
-    print(f'Running scenario: {scenario_name}')
-    print(f'{"="*60}')
+    if verbose:
+        print(f'\n{"="*60}')
+        print(f'Running scenario: {scenario_name}')
+        print(f'{"="*60}')
 
     # ── Load raw data ──────────────────────────────────────────────────────────
     steel_stock_data, steel_shares, pop_data, future_pop_data = load_raw_data()
@@ -212,8 +238,9 @@ def run_scenario(params: dict, scenario_name: str):
         'type':             ['historic']*len(steel_stock_pop) +
                             ['recent' if y <= 2019 else 'predicted' for y in future_years_trim],
     })
-    print(f'Stock 2008: {stock_df[stock_df["year"]==2008]["total_stock"].values[0]/1e9:.2f} Gt')
-    print(f'Stock 2050: {stock_df[stock_df["year"]==2050]["total_stock"].values[0]/1e9:.2f} Gt')
+    if verbose:
+        print(f'Stock 2008: {stock_df[stock_df["year"]==2008]["total_stock"].values[0]/1e9:.2f} Gt')
+        print(f'Stock 2050: {stock_df[stock_df["year"]==2050]["total_stock"].values[0]/1e9:.2f} Gt')
 
     # ── Sector stock decomposition ─────────────────────────────────────────────
     steel_stock_cat2 = stock_df[['year', 'total_stock']].copy()
@@ -300,11 +327,24 @@ def run_scenario(params: dict, scenario_name: str):
 
     # ── DRI penetration ────────────────────────────────────────────────────────
     years = np.arange(2022, 2101)
-    dri_pen    = s_curve(years, 0.02, params['dri_share_2050'], 2038, 0.30)
-    primary    = future['primary_steel_needed'].values
-    dri_prod   = primary * dri_pen
-    bf_prod    = primary * (1 - dri_pen)
-    eaf_prod   = future['scrap_supply'].values
+
+    if 'bfbof_share_2050' in params:
+        # Direct total-steel share parameterisation: H-DRI + BF-BOF + EAF = 1
+        total_steel = np.asarray(future['total_inflow'].values, dtype=float)
+        hdri_pen  = np.asarray(s_curve(years, 0.02, params['dri_share_2050'],   2038, 0.30), dtype=float)
+        bfbof_pen = np.asarray(s_curve(years, 0.68, params['bfbof_share_2050'], 2038, 0.30), dtype=float)
+        eaf_pen   = np.maximum(1.0 - hdri_pen - bfbof_pen, 0.0)
+        dri_prod  = total_steel * hdri_pen
+        bf_prod   = total_steel * bfbof_pen
+        eaf_prod  = total_steel * eaf_pen
+        primary   = dri_prod + bf_prod
+        dri_pen   = hdri_pen
+    else:
+        dri_pen  = np.asarray(s_curve(years, 0.02, params['dri_share_2050'], 2038, 0.30), dtype=float)
+        primary  = np.asarray(future['primary_steel_needed'].values, dtype=float)
+        dri_prod = primary * dri_pen
+        bf_prod  = primary * (1 - dri_pen)
+        eaf_prod = np.asarray(future['scrap_supply'].values, dtype=float)
 
     production = {
         'DRI Production': dri_prod,
@@ -315,23 +355,32 @@ def run_scenario(params: dict, scenario_name: str):
 
     # ── Emissions ──────────────────────────────────────────────────────────────
     MW_Fe = 55.845; MW_C = 12.011; MW_O = 15.999; MW_CO2 = MW_C + 2*MW_O
-    emissions_factor_BF         = ((3*MW_CO2)/(4*MW_Fe)) * 3.1
-    emissions_factor_DRI_fossil = (3*MW_CO2) / (2*MW_Fe)
-    emissions_factor_DRI_green  = 0.0
-    electrode_rate              = 0.002
+    emissions_factor_BF = params.get('bf_emission_factor', 1.83)  # t CO2/t steel
+    electrode_rate      = 0.002
+    eaf_elec_mwh_per_t  = params['eaf_efficiency'] * 1e-3  # kWh/t → MWh/t
 
-    # Grid CO2 in g/kWh → convert to t CO2/MWh (* 1e-3)
-    grid_co2_t_per_mwh   = params['grid_co2'] * 1e-3
-    eaf_elec_mwh_per_t   = params['eaf_efficiency'] * 1e-3  # kWh/t → MWh/t
-    emissions_factor_EAF = eaf_elec_mwh_per_t * grid_co2_t_per_mwh + electrode_rate * (MW_CO2/MW_C)
+    # Grid CO2: string → IEA trajectory, scalar → fixed, array → use directly
+    grid_co2_input = params['grid_co2']
+    if isinstance(grid_co2_input, str):
+        grid_co2_arr = get_grid_co2_trajectory(grid_co2_input, years)
+    elif np.isscalar(grid_co2_input):
+        grid_co2_arr = np.full(len(years), float(grid_co2_input))
+    else:
+        grid_co2_arr = np.asarray(grid_co2_input)
+
+    grid_co2_t_per_mwh   = grid_co2_arr / 1000   # g/kWh → t/MWh
+    emissions_factor_EAF = eaf_elec_mwh_per_t * grid_co2_t_per_mwh \
+                         + electrode_rate * (MW_CO2 / MW_C)  # array
 
     emissions = {
-        'BF Emissions':        bf_prod  / 1e6 * emissions_factor_BF,
-        'DRI Emissions':       dri_prod / 1e6 * emissions_factor_DRI_fossil + dri_prod / 1e6 * emissions_factor_EAF,
-        'EAF Emissions':       eaf_prod / 1e6 * emissions_factor_EAF,
-        'Green DRI Emissions': dri_prod / 1e6 * emissions_factor_DRI_green  + dri_prod / 1e6 * emissions_factor_EAF,
-        'Total Emissions':     bf_prod  / 1e6 * emissions_factor_BF + dri_prod / 1e6 * emissions_factor_DRI_fossil + eaf_prod / 1e6 * emissions_factor_EAF,
+        'BF Emissions':    bf_prod  / 1e6 * emissions_factor_BF,
+        'H-DRI Emissions': dri_prod / 1e6 * emissions_factor_EAF,
+        'EAF Emissions':   eaf_prod / 1e6 * emissions_factor_EAF,
+        'Total Emissions': bf_prod  / 1e6 * emissions_factor_BF
+                         + dri_prod / 1e6 * emissions_factor_EAF
+                         + eaf_prod / 1e6 * emissions_factor_EAF,
     }
+
 
     # ── Hydrogen demand ────────────────────────────────────────────────────────
     h2_conv    = params['h2_conversion'] / 1000  # kg/t → t H2/t steel
@@ -403,12 +452,13 @@ def run_scenario(params: dict, scenario_name: str):
 
     # ── Sanity checks ──────────────────────────────────────────────────────────
     idx_2050 = np.where(years == 2050)[0][0]
-    print(f'  Primary steel 2050:  {primary[idx_2050]/1e6:.0f} Mt')
-    print(f'  DRI production 2050: {dri_prod[idx_2050]/1e6:.0f} Mt  ({dri_pen[idx_2050]*100:.0f}% of primary)')
-    print(f'  H2 demand 2050:      {h2_total[idx_2050]:.2f} Mt')
-    print(f'  CO2 total 2050:      {emissions["Total Emissions"][idx_2050]:.0f} Mt')
-    print(f'  Ni inflow 2050:      {materials["nickel_inflow"][idx_2050]:.2f} kt')
-    print(f'  Ir inflow 2050:      {materials["iridium_inflow"][idx_2050]*1000:.2f} t')
+    if verbose:
+        print(f'  Primary steel 2050:  {primary[idx_2050]/1e6:.0f} Mt')
+        print(f'  DRI production 2050: {dri_prod[idx_2050]/1e6:.0f} Mt  ({dri_pen[idx_2050]*100:.0f}% of primary)')
+        print(f'  H2 demand 2050:      {h2_total[idx_2050]:.2f} Mt')
+        print(f'  CO2 total 2050:      {emissions["Total Emissions"][idx_2050]:.0f} Mt')
+        print(f'  Ni inflow 2050:      {materials["nickel_inflow"][idx_2050]:.2f} kt')
+        print(f'  Ir inflow 2050:      {materials["iridium_inflow"][idx_2050]*1000:.2f} t')
 
     # ── Save ───────────────────────────────────────────────────────────────────
     out = {
@@ -439,50 +489,46 @@ def run_scenario(params: dict, scenario_name: str):
     out_path = OUTPUT_FOLDER / f'{scenario_name}.pkl'
     with open(out_path, 'wb') as f:
         pickle.dump(out, f)
-    print(f'  Saved → {out_path}')
+    if verbose:
+        print(f'  Saved → {out_path}')
     return out
 
 def load_remind_data(file_paths: dict, year_cols=None):
-    """
-    Load and extract green H2 data from REMIND .mif files.
-    
-    Parameters
-    ----------
-    file_paths : dict — {scenario_label: filepath}
-    year_cols  : list of str — year columns to extract (default 2020-2100)
-    
-    Returns
-    -------
-    remind_data : dict — {scenario_label: {'years': [...], 'total_h2': [...], 'green_h2': [...]}}
-    """
-    import pandas as pd
-    import numpy as np
-
     if year_cols is None:
         year_cols = ['2020','2025','2030','2035','2040','2045','2050',
                      '2060','2070','2080','2090','2100']
 
-    EJ_to_MtH2 = 1000 / 142  # 1 EJ ≈ 7.04 Mt H2 (LHV)
+    EJ_to_MtH2 = 1000 / 142   # 1 EJ ≈ 7.04 Mt H2 (LHV)
+    EJ_to_TWh  = 277.78        # 1 EJ = 277.78 TWh
     remind_data = {}
 
     for label, fpath in file_paths.items():
-        df   = pd.read_csv(fpath, sep=';')
-        dfw  = df[df['Region'] == 'World'].copy()
+        df  = pd.read_csv(fpath, sep=';')
+        dfw = df[df['Region'] == 'World'].copy()
 
-        def get_var(variable):
+        def get_var(variable, scale):          # ← now accepts scale
             row = dfw[dfw['Variable'] == variable][year_cols]
             if row.empty:
                 return np.zeros(len(year_cols))
-            return row.values[0].astype(float) * EJ_to_MtH2
+            return row.values[0].astype(float) * scale
 
         remind_data[label] = {
-            'years':    [int(y) for y in year_cols],
-            'total_h2': get_var('SE|Hydrogen'),
-            'green_h2': get_var('SE|Hydrogen|+|Electricity'),
+            'years':                  [int(y) for y in year_cols],
+            'total_h2':               get_var('SE|Hydrogen',                           EJ_to_MtH2),
+            'green_h2':               get_var('SE|Hydrogen|+|Electricity',             EJ_to_MtH2),
+            'renewable_electricity':  get_var('SE|Electricity|Non-Biomass Renewables', EJ_to_TWh),
+            'electrolysis_electricity':get_var('SE|Input|Electricity|Hydrogen',         EJ_to_TWh),
+            'wind':                   get_var('SE|Electricity|+|Wind',                 EJ_to_TWh),
+            'solar':                  get_var('SE|Electricity|+|Solar',                EJ_to_TWh),
+            'hydro':                  get_var('SE|Electricity|+|Hydro',                EJ_to_TWh),
+            'geothermal':             get_var('SE|Electricity|+|Geothermal',           EJ_to_TWh),
         }
-        print(f'Loaded: {label}  |  Green H2 2050: {remind_data[label]["green_h2"][year_cols.index("2050")]:.1f} Mt')
+        print(f'Loaded: {label}'
+              f'  |  Green H2 2050: {remind_data[label]["green_h2"][year_cols.index("2050")]:.1f} Mt'
+              f'  |  Renew elec 2050: {remind_data[label]["renewable_electricity"][year_cols.index("2050")]:.0f} TWh'
+              f'  |  Electrolysis elec 2050: {remind_data[label]["electrolysis_electricity"][year_cols.index("2050")]:.0f} TWh')
 
-    return remind_data
+    return remind_data  # ← return is at the end, after the loop
 
 def compare_remind_h2(scenarios: dict, remind_data: dict):
     """
@@ -497,7 +543,6 @@ def compare_remind_h2(scenarios: dict, remind_data: dict):
     -------
     dict — {scenario_name: interpolated H2 array}
     """
-    import numpy as np
 
     remind_years = list(remind_data.values())[0]['years']
 

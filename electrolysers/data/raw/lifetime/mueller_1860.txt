@@ -1,2 +1,0 @@
-source: doi.lifetimes_mueller_1860
-extraction method: used download link

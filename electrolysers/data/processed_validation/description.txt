@@ -1,2 +1,0 @@
-all data used in the validation and calibration steps, in their cleaned form
-again, each file should have a processing fiel behind it.

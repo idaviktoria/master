@@ -11,7 +11,7 @@ from pathlib import Path
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 from dynamic_stock_model import DynamicStockModel
-from scipy.interpolate import PchipInterpolator
+from scipy.interpolate import PchipInterpolator, CubicHermiteSpline
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -21,11 +21,12 @@ OUTPUT_FOLDER = BASE_PATH / 'data' / 'processed'
 OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # ── IEA grid CO2 intensity trajectories ───────────────────────────────────────
-_IEA_GRID_YEARS = [2010, 2023, 2024, 2035, 2040, 2050]
+_iea_df         = pd.read_csv(RAW_FOLDER / 'future' / 'iea_grid_co2.csv')
+_IEA_GRID_YEARS = _iea_df['year'].tolist()
 _IEA_GRID_DATA  = {
-    'current_policies': [529, 457, 446, 291, 246, 192],
-    'stated_policies':  [529, 457, 446, 251, 187, 122],
-    'net_zero':         [529, 457, 446,  72,   4,   0],
+    'current_policies': _iea_df['current_policies'].tolist(),
+    'stated_policies':  _iea_df['stated_policies'].tolist(),
+    'net_zero':         _iea_df['net_zero'].tolist(),
 }
 
 def get_grid_co2_trajectory(trajectory, model_years):
@@ -45,6 +46,10 @@ GRID_TRAJECTORY_MAP = {
     'Technology':      'stated_policies',
     'Full Transition': 'net_zero',
 }
+
+# ── WSA crude steel production data (Mt) ──────────────────────────────────────
+_wsa_df        = pd.read_csv(RAW_FOLDER / 'Steel' / 'wsa_production.csv')
+WSA_PRODUCTION = dict(zip(_wsa_df['year'].astype(int), _wsa_df['production_mt']))
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 def logistic(t, K, r, t0):
@@ -67,7 +72,7 @@ def fit_logistic_and_apply(t, stock_data, steel_stock_shares):
 
 def run_dsm(t, s, lt):
     dsm = DynamicStockModel(t=t, s=s, lt=lt)
-    s_c, o_c, i = dsm.compute_stock_driven_model(NegativeInflowCorrect=False)
+    s_c, o_c, i = dsm.compute_stock_driven_model(NegativeInflowCorrect=True)
     o_c          = dsm.compute_o_c_from_s_c()
     o            = dsm.compute_outflow_total()
     stock_change = dsm.compute_stock_change()
@@ -122,7 +127,7 @@ def load_raw_data():
 
 
 # ── Main model function ────────────────────────────────────────────────────────
-def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
+def run_scenario(params: dict, scenario_name: str, verbose: bool = True, output_folder: Path = None):
     """
     Run the full model for a given set of parameters and save results.
 
@@ -145,10 +150,12 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
         efficiency_PEM          : float  — PEM electricity consumption (kWh/kg H2)
         efficiency_Other        : float  — Other electricity consumption (kWh/kg H2)
         nickel_intensity        : float  — Ni intensity AEC (kg/MW)
-        platinum_intensity      : float  — Pt intensity PEM (kg/MW)
-        iridium_intensity_2022  : float  — Ir intensity PEM in 2022 (kg/MW)
-        iridium_intensity_2030  : float  — Ir intensity PEM in 2030 (kg/MW)
-        iridium_intensity_2050  : float  — Ir intensity PEM in 2050 (kg/MW)
+        platinum_intensity_2022 : float  — Pt intensity PEM in 2022 (g/kW)
+        platinum_intensity_2030 : float  — Pt intensity PEM in 2030 (g/kW)
+        platinum_intensity_2050 : float  — Pt intensity PEM in 2050 (g/kW)
+        iridium_intensity_2022  : float  — Ir intensity PEM in 2022 (g/kW)
+        iridium_intensity_2030  : float  — Ir intensity PEM in 2030 (g/kW)
+        iridium_intensity_2050  : float  — Ir intensity PEM in 2050 (g/kW)
     scenario_name : str — used for output filename
     """
     if verbose:
@@ -167,20 +174,6 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
 
     shares_2008 = {cat: float(steel_shares[steel_shares['year'] == 2008][cat].values[0])
                    for cat in categories}
-
-    shares_2013_raw = {'vehicles': 0.079+0.020, 'machinery': 0.160+0.120,
-                       'BC': 0.293+0.243, 'appliances': 0.031+0.030+0.007}
-    total = sum(shares_2013_raw.values())
-    shares_2013 = {k: v/total for k, v in shares_2013_raw.items()}
-
-    future_share_years = list(range(2009, 2101))
-    future_shares_df   = pd.DataFrame(index=future_share_years, columns=categories)
-    for year in future_share_years:
-        alpha = min((year - 2008) / (2013 - 2008), 1.0)
-        for cat in categories:
-            future_shares_df.loc[year, cat] = (1-alpha)*shares_2008[cat] + alpha*shares_2013[cat]
-    future_shares_df = future_shares_df.astype(float)
-    future_shares_df.index.name = 'year'
 
     # ── Steel stock per capita — logistic projection ───────────────────────────
     steel_stock_cat = steel_stock_data[['year', 'steel_stock']].copy()
@@ -207,27 +200,47 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
     steel_stock_pop['stock_per_capita'] = steel_stock_pop['steel_stock'] / steel_stock_pop['population']
     steel_stock_pop = steel_stock_pop.dropna(subset=['stock_per_capita'])
 
-    # Fit logistic with scenario L
-    L = params['L']
-    recent = steel_stock_pop[steel_stock_pop['year'] >= 1800]
-    popt, _ = curve_fit(
-        lambda x, k, x0: logistic_fixed_L(x, k, x0, L=L),
-        np.array(recent['year']), np.array(recent['stock_per_capita']),
-        p0=[0.05, 2030], bounds=([0.01, 2020], [0.15, 2060]), maxfev=10000
-    )
-    k_fit, x0_fit = popt
+    # ── Steel stock per capita ─────────────────────────────────────────────────
+    L         = params['L']
+    k_scen    = float(params['k_scen'])
+    last_year = int(steel_stock_pop['year'].max())
+    spc_2008  = float(steel_stock_pop[steel_stock_pop['year'] == last_year]['stock_per_capita'].values[0])
 
-    last_year        = int(steel_stock_pop['year'].max())
-    last_spc         = steel_stock_pop[steel_stock_pop['year'] == last_year]['stock_per_capita'].values[0]
-    future_years     = np.arange(last_year, 2101)
-    future_spc_raw   = logistic_fixed_L(future_years, k_fit, x0_fit, L=L)
-    offset           = last_spc - future_spc_raw[0]
-    future_spc       = future_spc_raw + offset
+    # Linear bridge 2008→2025 anchored toward 11 t/cap in 2100 (shared across scenarios)
+    spc_2025     = float(np.interp(2025.0, [float(last_year), 2100.0], [spc_2008, 11.0]))
+    bridge_yrs   = np.arange(last_year + 1, 2026, dtype=float)
+    bridge_spc   = np.linspace(spc_2008, spc_2025, len(bridge_yrs) + 1)[1:]
 
-    mask              = future_years > last_year
-    future_years_trim = future_years[mask]
-    future_spc_trim   = future_spc[mask]
+    # Fit a single smooth logistic to all pre-2025 data
+    pre_yr  = np.concatenate([steel_stock_pop['year'].values.astype(float), bridge_yrs])
+    pre_spc = np.concatenate([steel_stock_pop['stock_per_capita'].values.astype(float), bridge_spc])
+
+    def _log3(x, k, x0, Lh):
+        return Lh / (1 + np.exp(-k * (x - x0)))
+
+    popt, _ = curve_fit(_log3, pre_yr, pre_spc,
+                        p0=[0.05, 2000.0, 15.0],
+                        bounds=([0.01, 1900.0, 5.0], [0.3, 2050.0, 30.0]))
+    k_hist, x0_hist, L_hist = popt
+    spc_at_2025 = float(_log3(2025.0, k_hist, x0_hist, L_hist))
+
+    # Cubic Hermite spline from 2025 → 2100: inherits historical slope at 2025 (no kink)
+    deriv_at_2025 = k_hist * spc_at_2025 * (1.0 - spc_at_2025 / L_hist)
+    chs_future    = CubicHermiteSpline([2025.0, 2100.0],
+                                       [spc_at_2025, float(L)],
+                                       [deriv_at_2025, 0.0])
+
+    future_years = np.arange(last_year, 2101)
+    anchor_idx   = int(np.searchsorted(future_years, 2025))
+
+    future_spc = np.concatenate([
+        _log3(future_years[:anchor_idx + 1].astype(float), k_hist, x0_hist, L_hist),
+        chs_future(future_years[anchor_idx:].astype(float))[1:],
+    ])
+
+    future_years_trim = future_years[1:]
     future_pop_trim   = future_pop_data[future_pop_data['year'] > last_year]['population'].values
+    future_spc_trim   = future_spc[1:]
     future_stock      = future_spc_trim * future_pop_trim
 
     stock_df = pd.DataFrame({
@@ -235,46 +248,15 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
         'stock_per_capita': np.concatenate([steel_stock_pop['stock_per_capita'].values, future_spc_trim]),
         'total_stock':      np.concatenate([steel_stock_pop['steel_stock'].values, future_stock]),
         'population':       np.concatenate([steel_stock_pop['population'].values, future_pop_trim]),
-        'type':             ['historic']*len(steel_stock_pop) +
+        'type':             ['historic'] * len(steel_stock_pop) +
                             ['recent' if y <= 2019 else 'predicted' for y in future_years_trim],
     })
     if verbose:
         print(f'Stock 2008: {stock_df[stock_df["year"]==2008]["total_stock"].values[0]/1e9:.2f} Gt')
         print(f'Stock 2050: {stock_df[stock_df["year"]==2050]["total_stock"].values[0]/1e9:.2f} Gt')
 
-    # ── Sector stock decomposition ─────────────────────────────────────────────
-    steel_stock_cat2 = stock_df[['year', 'total_stock']].copy()
-
-    stock_pre1900b = steel_stock_cat2[steel_stock_cat2['year'] < 1900][['year', 'total_stock']].copy()
-    for cat, share in shares_1900.items():
-        stock_pre1900b[f'stock_{cat}'] = stock_pre1900b['total_stock'] * share
-
-    stock_post1900b = steel_stock_cat2[
-        (steel_stock_cat2['year'] >= 1900) & (steel_stock_cat2['year'] <= 2008)
-    ][['year', 'total_stock']].copy()
-    stock_post1900b = stock_post1900b.merge(steel_shares.reset_index(), on='year', how='left')
-    for cat in categories:
-        stock_post1900b[f'stock_{cat}'] = stock_post1900b['total_stock'] * stock_post1900b[cat]
-
-    future_stock_cat = stock_df[stock_df['year'] > 2008][['year', 'total_stock']].copy()
-    for cat in categories:
-        future_stock_cat[f'stock_{cat}'] = future_stock_cat.apply(
-            lambda row: row['total_stock'] * (
-                future_shares_df.loc[int(row['year']), cat]
-                if int(row['year']) in future_shares_df.index
-                else future_shares_df.loc[2013, cat]), axis=1)
-
-    steel_stock_shares = pd.concat([stock_pre1900b, stock_post1900b, future_stock_cat], ignore_index=True)
-    steel_stock_shares = steel_stock_shares.sort_values('year').reset_index(drop=True)
-    steel_stock_shares = steel_stock_shares[
-        ['year', 'total_stock', 'stock_vehicles', 'stock_machinery', 'stock_BC', 'stock_appliances']
-    ]
-    steel_stock_shares = steel_stock_shares[
-        (steel_stock_shares['year'] >= 1800) & (steel_stock_shares['year'] <= 2100)
-    ].copy()
-
-    # ── DSM ────────────────────────────────────────────────────────────────────
-    t  = np.arange(1800, 2101)
+    # ── DSM ───────────────────────────────────────────────────────────────────
+    t  = np.arange(1700, 2101)
     CV = 0.3
 
     lt_vehicles   = {'Type': 'Normal', 'Mean': np.full(len(t), 20), 'StdDev': np.full(len(t), 20*CV)}
@@ -282,10 +264,28 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
     lt_bc         = {'Type': 'Normal', 'Mean': np.full(len(t), 75), 'StdDev': np.full(len(t), 75*CV)}
     lt_appliances = {'Type': 'Normal', 'Mean': np.full(len(t), 15), 'StdDev': np.full(len(t), 15*CV)}
 
-    s_vehicles   = fit_logistic_and_apply(t, np.array(steel_stock_shares['stock_vehicles']),   steel_stock_shares)
-    s_machinery  = fit_logistic_and_apply(t, np.array(steel_stock_shares['stock_machinery']),  steel_stock_shares)
-    s_bc         = fit_logistic_and_apply(t, np.array(steel_stock_shares['stock_BC']),         steel_stock_shares)
-    s_appliances = fit_logistic_and_apply(t, np.array(steel_stock_shares['stock_appliances']), steel_stock_shares)
+    # Sector stocks: smooth logistic-based total stock (avoids kink from actual vs projected data)
+    t_float = t.astype(float)
+    spc_smooth = np.where(
+        t_float <= 2025,
+        _log3(t_float, k_hist, x0_hist, L_hist),
+        chs_future(t_float)
+    )
+    pop_smooth = np.interp(t_float,
+                           stock_df['year'].values.astype(float),
+                           stock_df['population'].values.astype(float))
+    total_stock_all = spc_smooth * pop_smooth
+
+    def _smooth_share(s0, s1, mid=1960, k=0.07):
+        sig      = 1 / (1 + np.exp(-k * (t_float - mid)))
+        sig_min  = 1 / (1 + np.exp(-k * (1800.0   - mid)))
+        sig_max  = 1 / (1 + np.exp(-k * (2100.0   - mid)))
+        return s0 + (s1 - s0) * (sig - sig_min) / (sig_max - sig_min)
+
+    s_vehicles   = total_stock_all * _smooth_share(shares_1900['vehicles'],   shares_2008['vehicles'])
+    s_machinery  = total_stock_all * _smooth_share(shares_1900['machinery'],  shares_2008['machinery'])
+    s_bc         = total_stock_all * _smooth_share(shares_1900['BC'],         shares_2008['BC'])
+    s_appliances = total_stock_all * _smooth_share(shares_1900['appliances'], shares_2008['appliances'])
 
     _, _, o_vehicles,   sc_vehicles,   i_vehicles   = run_dsm(t, s_vehicles,   lt_vehicles)
     _, _, o_machinery,  sc_machinery,  i_machinery  = run_dsm(t, s_machinery,  lt_machinery)
@@ -311,7 +311,6 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
     results['total_steel_needed'] = sum(results[f'steel_needed_{cat}'] for cat in categories)
     results = results[results['Year'] != 1800].copy()
 
-    # ── Future: scrap + primary steel ──────────────────────────────────────────
     results_total = (results_vehicles.merge(results_machinery, on='Year')
                                       .merge(results_bc,        on='Year')
                                       .merge(results_appliances, on='Year'))
@@ -319,6 +318,7 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
     results_total['total_outflow'] = results_total['outflow_vehicles'] + results_total['outflow_machinery'] + results_total['outflow_bc'] + results_total['outflow_appliances']
 
     future = results_total[results_total['Year'] >= 2022].copy()
+
     years_future = np.array(future['Year'])
     future['scrap_collection_rate'] = scrap_collection_s_curve(
         years_future, start=0.85, end=params['scrap_end'])
@@ -355,7 +355,7 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
 
     # ── Emissions ──────────────────────────────────────────────────────────────
     MW_Fe = 55.845; MW_C = 12.011; MW_O = 15.999; MW_CO2 = MW_C + 2*MW_O
-    emissions_factor_BF = params.get('bf_emission_factor', 1.83)  # t CO2/t steel
+    emissions_factor_BF = params.get('bf_emission_factor', 2.3)  # t CO2/t steel
     electrode_rate      = 0.002
     eaf_elec_mwh_per_t  = params['eaf_efficiency'] * 1e-3  # kWh/t → MWh/t
 
@@ -428,11 +428,19 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
     # ── Critical materials ─────────────────────────────────────────────────────
     ni_int = params['nickel_intensity']
     
-    pt_int = params['platinum_intensity']
+    pt_2022 = params['platinum_intensity_2022']
+    pt_2030 = params['platinum_intensity_2030']
+    pt_2050 = params['platinum_intensity_2050']
 
     ir_2022 = params['iridium_intensity_2022']
     ir_2030 = params['iridium_intensity_2030']
     ir_2050 = params['iridium_intensity_2050']
+
+    pt_interp = PchipInterpolator(
+        [2022, 2030, 2050, 2100],
+        [pt_2022, pt_2030, pt_2050, pt_2050]
+    )
+    pt_int_arr = np.clip(pt_interp(years), 0, None)
 
     interp_func = PchipInterpolator(
         [2022, 2030, 2050, 2100],
@@ -444,9 +452,9 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
     'nickel_inflow':   i_aec * 1e3 * ni_int      / 1e6, # kt/yr
     'nickel_stock':    cap_aec * 1e3 * ni_int     / 1e6,
     'nickel_outflow':  o_aec * 1e3 * ni_int       / 1e6,
-    'platinum_inflow': i_pem * 1e3 * pt_int       / 1e6, # kt/yr
-    'platinum_stock':  cap_pem * 1e3 * pt_int     / 1e6,
-    'iridium_inflow':  i_pem * 1e3 * ir_int_arr   / 1e6,  # # kt/yr, now time-varying
+    'platinum_inflow': i_pem * 1e3 * pt_int_arr   / 1e6, # kt/yr, time-varying
+    'platinum_stock':  cap_pem * 1e3 * pt_int_arr / 1e6,
+    'iridium_inflow':  i_pem * 1e3 * ir_int_arr   / 1e6, # kt/yr, time-varying
     'iridium_stock':   cap_pem * 1e3 * ir_int_arr / 1e6,
     }
 
@@ -478,19 +486,16 @@ def run_scenario(params: dict, scenario_name: str, verbose: bool = True):
         'materials':        materials,
         'emissions_factor_BF':  emissions_factor_BF,
         'emissions_factor_EAF': emissions_factor_EAF,
-        'wsa_production': {
-            1950:189,1955:270,1960:347,1965:456,1970:595,1975:644,1980:717,
-            1985:719,1990:770,1995:753,2000:850,2005:1148,2010:1435,2011:1540,
-            2012:1563,2013:1654,2014:1676,2015:1626,2016:1634,2017:1738,
-            2018:1831,2019:1879,2020:1883,2021:1963,2022:1889,2023:1904,2024:1885,
-        },
+        'wsa_production':    WSA_PRODUCTION,
     }
 
-    out_path = OUTPUT_FOLDER / f'{scenario_name}.pkl'
+    save_folder = output_folder if output_folder is not None else OUTPUT_FOLDER
+    save_folder.mkdir(parents=True, exist_ok=True)
+    out_path = save_folder / f'{scenario_name}.pkl'
     with open(out_path, 'wb') as f:
         pickle.dump(out, f)
     if verbose:
-        print(f'  Saved → {out_path}')
+        print(f'  Saved -> {out_path}')
     return out
 
 def load_remind_data(file_paths: dict, year_cols=None):
